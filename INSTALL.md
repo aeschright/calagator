@@ -1,124 +1,100 @@
-Calagator
-=========
+# Installing Calagator
 
+Calagator is distributed as a [Rails engine](http://guides.rubyonrails.org/engines.html), which is a type of Ruby gem that can be "mounted" inside of a Rails application to add functionality. In this document, we'll refer to the app that Calagator is mounted in as the *host application*.
 
-Setup
------
+## Requirements
 
-To use Calagator, you'll need to:
+Calagator requires Ruby 1.9.3 - 2.1.x, and a host application built on Rails 4 or newer.
 
-  1. [Install git](http://git-scm.com/) 1.5.x or newer, a distributed version control system. Read the [Github Git Guides](http://github.com/guides/home) to learn how to use *git*.
-  2. [Install Ruby](http://www.ruby-lang.org/), a programming language. You can use MRI Ruby 1.8.6, MRI Ruby 1.8.7, or [Phusion REE (Ruby Enterprise Edition)](http://rubyenterpriseedition.com/). Your operating system may already have Ruby installed or offer it as a prebuilt package.
-  3. [Install RubyGems](http://rubyforge.org/projects/rubygems/) 1.3.x, a tool for managing software packages for Ruby. If you already have `rubygems` installed, you may need to update it by running `gem update --system` as root or an administrator.
-  4. [Install SQLite3](http://www.sqlite.org/), a database engine. Your operating system may already have Ruby installed or offer it as a prebuilt package.
-  5. [Install Ruby on Rails](http://rubyonrails.org/), a web development framework. You should run `gem install rails -v '~> 2.3.10' --no-ri --no-rdoc` as root or an administrator.
+## Running a site based on Calagator
 
-Additional, but out of date, instructions can be found at http://code.google.com/p/calagator/wiki/DevelopmentSoftware
+If you're looking to build your own community calendar using Calagator, follow these instructions. If you're aiming to contribute code to Calagator itself, see the instructions in [DEVELOPMENT.md](https://github.com/calagator/calagator/blob/master/DEVELOPMENT.md).
 
+### Getting Started
 
-Checkout
---------
+First, install the `calagator` gem:
 
-To get the Calagator source code:
+    gem install calagator --pre
+    
+You can then use the `calagator` command to generate a new Rails application with Calagator installed:
 
-  1. Follow the **Setup** instructions above.
-  2. Run `git clone git://github.com/calagator/calagator.git` or equivalent, which will create a `calagator` directory with the source code. Go into this directory and run the remaining commands from there.
+    calagator new my_great_calendar
+    cd my_great_calendar
 
+You should now be able to start your calendar in development mode with:
 
-Configuration
--------------
+    bin/rails server
 
-To configure Calagator:
+If all went according to plan, you should be able to see your calendar at: [http://localhost:3000](http://localhost:3000).
 
-  1. Follow the **Checkout** instructions above.
-  2. Initialize your database, run `rake db:migrate db:test:prepare`
-  3. Optionally setup API keys so that maps display and such, see 'API Keys'.
+To stop the server, press `CTRL-C`.
 
+## Configuration
 
-Development
------------
+Calagator's settings can be configured by editing these files in your host application:
 
-To run Calagator in development mode:
+* `config/initializers/01_calagator.rb`
+* `config/initializers/02_geokit.rb`
 
-  1. Follow the **Configuration** instructions above.
-  2. Start your search service if needed, see "Search engine" below for details.
-  3. Start the *Ruby on Rails* web application by running `./script/server` (UNIX) or `ruby script/server` (Windows).
-  4. Open a web browser to http://localhost:3000/ to use the development server
-  5. Read the [Rails Guides](http://guides.rubyonrails.org/) to learn how to develop a Ruby on Rails application.
-  6. When done, stop the *Ruby on Rails* server `script/server` by pressing **CTRL-C**.
-  7. Stop your search service if needed, see "Search engine" below for details.
+Please see these file for more details.
 
+### Time Zone
 
-Customization
--------------
+It's important to make sure your time zone is properly configured in `config/application.rb`. Calagator relies heavily on this setting when displaying event times.
 
-If you want to customize your Calagator, do NOT just start modifying files in `app`, `public` and `themes/default`. Please read the instructions in `themes/README.txt` for how to use the theming system.
+### API Keys
 
+Calagator uses a number of API keys to communicate with external services.
 
-Security and secrets.yml
-------------------------
+* Google Maps: To use Google's geocoder, and to use Google to display maps, you must get an API key.  See `config/initializers/01_calagator.rb` and `config/initializers/02_geokit.rb` for details.
 
-This application runs with insecure settings by default to make it easy to get started. These default settings include publicly-known cryptography keys that can allow attackers to gain admin privileges to your application. You should create a `config/secrets.yml` file with your secret settings if you intend to run this application on a server that can be accessed by untrusted users, read the [config/secrets.yml.sample](config/secrets.yml.sample) file for details.
+* Meetup.com: To import events from Meetup.com, you need an API key. See `config/initializers/01_calagator.rb` for details.
 
+### Search engine
 
-API Keys
---------
+You can specify the search engine to use in `config/initializers/01_calagator.rb`:
 
-The application uses a number of API keys to communicate with external services.
+#### SQL
 
-* Yahoo! Upcoming: To import events from Upcoming, the application can use a public key, but for production use, you should really get and use your own API key. See the `config/secrets.yml.sample` file's `upcoming_api_key` section for details.
+This is the default search engine which uses SQL queries. This option requires no additional setup, dependencies, or service. It does not provide relevance-based sorting. It does provide substring matches.
 
-* Google Maps: To display Google maps, you must get an API key. For details, see the `config/geocoder_api_keys.yml.example` for details.
+#### Sunspot
 
+This optional search engine uses the Sunspot gem. This option requires additional setup, dependencies, and service. It provides relevance-based sorting. It does not provide substring matches.
 
-Search engine
--------------
+To use Sunspot, you will need to [install Java 1.6.x](http://www.java.com/getjava), a programming language used to run the search service.
 
-You can specify the search engine to use in your `config/secrets.yml` file:
+You can start the Solr search service for local development with:
 
-### sql
+    bundle exec rake sunspot:solr:start
 
-Default search engine which uses SQL queries. Requires no additional setup, dependencies or service. Does not provide relevance-based sorting. Provides substring matches.
+You will then need to initially populate your records by running:
 
-### sunspot
+    bundle exec rake sunspot:reindex:calagator
 
-Optional search engine that uses the Sunspot gem. Requires additional setup, dependencies and service. Provides relevance-based sorting. Does not provide substring matches.
+You can stop the Solr search service with:
 
-To use, you will need to [install Java 1.6.x](http://www.java.com/getjava), a programming language used to run the search service.
+    bundle exec rake sunspot:solr:stop
 
-You will then need to initially populate your records by running commands like:
+Calagator has tests that verify functionality against Solr automatically, if the tests find the service running; you'll see pending tests if Solr isn't found. To start a test instance of Solr, do:
 
-    rake RAILS_ENV=production sunspot:solr:start
-    rake RAILS_ENV=production sunspot:reindex:calagator
+    bundle exec rake RAILS_ENV=test sunspot:solr:start
 
-You can start the Solr search service a command like:
+You should set up a firewall to protect the ports utilized by the Solr search service. These ports are described in the [config/sunspot.yml](config/sunspot.yml) file.
 
-    rake RAILS_ENV=production sunspot:solr:start
+## Customization
 
-You can stop the Solr search service a command like:
+There are two places you'll want to customize right away. Both are *.html.erb files you'll need to create.
 
-    rake RAILS_ENV=production sunspot:solr:stop
+`views/calagator/site/_description.html.erb` is the description in the sidebar on the home page of your calendar.
 
-### acts_as_solr
+`views/calagator/site/about.html.erb` is the about page linked to from the home page. The existing sidebar has links to anchors called `find_local_events`, `share_local_events`, and `get_involved` as suggested sections of the About page.
 
-Optional search engine that uses the `acts_as_solr` gem. Requires additional setup, dependencies and service. Provides relevance-based sorting. Provides substring matches. However, has severe performance problems that may slow down creating and editing records.
+<!--
+**TODO: engine CSS and view overrides, variables.scss, config.scss(?)**
+-->
 
-To use, you will need to [install Java 1.6.x](http://www.java.com/getjava), a programming language used to run the search service.
+Feedback wanted
+---------------
 
-You will then need to initially populate your records by running a command like:
-
-    rake RAILS_ENV=production solr:rebuild_index
-
-You can start the Solr search service a command like:
-
-    rake RAILS_ENV=production solr:start
-
-You can stop the Solr search service a command like:
-
-    rake RAILS_ENV=production solr:stop
-
-
-Production
-----------
-
-Calagator.org runs on [Ubuntu Linux](http://ubuntu.com/), [Phusion REE (Ruby Enterprise Edition)](http://rubyenterpriseedition.com/) and [Phusion Passenger](http://www.modrails.com/).
+Is there something wrong, unclear, or outdated in this documentation? Please get in touch so we can make it better. If you can contribute improved text, we'd really appreciate it.
